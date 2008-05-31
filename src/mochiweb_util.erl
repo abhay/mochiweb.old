@@ -12,6 +12,7 @@
 -export([shell_quote/1, cmd/1, cmd_string/1, cmd_port/2]).
 -export([record_to_proplist/2, record_to_proplist/3]).
 -export([safe_relative_path/1, partition/2]).
+-export([is_atleast_version/1]).
 -export([test/0]).
 
 -define(PERCENT, 37).  % $\%
@@ -78,7 +79,11 @@ safe_relative_path("", Acc) ->
         [] ->
             "";
         _ ->
-            string:join(lists:reverse(Acc), "/")
+          PathList = lists:reverse(Acc),
+          case is_atleast_version({5,6}) of
+            true -> string:join(PathList, "/");
+            false -> hd(PathList) ++ lists:concat(["/" ++ X || X <- tl(PathList)])
+          end
     end;
 safe_relative_path(P, Acc) ->
     case partition(P, "/") of
@@ -432,6 +437,34 @@ shell_quote([C | Rest], Acc) when C =:= $\" orelse C =:= $\` orelse
     shell_quote(Rest, [C, $\\ | Acc]);
 shell_quote([C | Rest], Acc) ->
     shell_quote(Rest, [C | Acc]).
+
+is_atleast_version(Major1) when is_integer(Major1) -> is_atleast_version({Major1, 0, 0});
+is_atleast_version({Major1, Minor1}) -> is_atleast_version({Major1, Minor1, 0});
+is_atleast_version({Major1, Minor1, Tiny1}) ->
+  try
+    case regexp:split(erlang:system_info(version), "\\.") of
+      {ok, List} when length(List) =:= 3 ->
+        [Major2, Minor2, Tiny2] = [list_to_integer(X) || X <- List],
+        
+        if
+          Major2 > Major1 -> true;
+          Major2 =:= Major1 ->
+            if
+              Minor2 > Minor1 -> true;
+              Minor2 =:= Minor1 ->
+                if
+                  Tiny2 >= Tiny1 -> true;
+                  true -> false
+                end;
+              true -> false
+            end;
+          true -> false
+        end;
+      _ -> false
+    end
+  catch
+    _:_ -> false
+  end.
 
 test() ->
     test_join(),

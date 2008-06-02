@@ -3,7 +3,7 @@
 
 %% @doc Generic RPC Implementation. Only supports JSON-RPC for now and does not support sessions.
 
--module(json_rpc).
+-module(mochiweb_rpc).
 -author("Abhay Kumar <abhay@opensynapse.net>").
 
 -export([handler/2]).

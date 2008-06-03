@@ -55,17 +55,17 @@ handle_request(Req, {Mod, Fun}) ->
 
 decode_request_body(Body) ->
   try
-    JsonObj = mochijson:decode(Body),
+    {ok, JsonObj}= json:decode_string(Body),
     {ok, {call, list_to_atom(fetch(JsonObj, method)), fetch(JsonObj, params)}, fetch(JsonObj, id)}
   catch
      _:_ -> {error, "Error decoding request."}
   end.
 
-encode_error(Reason, ID) -> lists:flatten(mochijson:encode({struct, [{id, ID}, {error, Reason}, {result, null}]})).
+encode_error(Reason, ID) -> lists:flatten(json:encode({struct, [{id, ID}, {error, Reason}, {result, null}]})).
 
 encode_result(Result, ID) ->
   try
-    lists:flatten(mochijson:encode({struct, [{id, ID}, {error, null}, {result, Result}]}))
+    lists:flatten(json:encode({struct, [{id, ID}, {error, null}, {result, Result}]}))
   catch
     _:_ -> encode_error("Error encoding response.", ID)
   end.
@@ -73,9 +73,7 @@ encode_result(Result, ID) ->
 send(Req, StatusCode, JsonStr) ->
   Req:respond({StatusCode, [{'Content-Type', "application/json"}], JsonStr}).
 
-fetch(JsonObj, Key) when is_atom(Key) ->
-  fetch(JsonObj, atom_to_list(Key));
-fetch({struct, List}, Key) when is_list(List) ->
+fetch({struct, List}, Key) when is_list(List) and is_atom(Key) ->
   case lists:keysearch(Key, 1, List) of
     {value, {Key, Value}} -> Value;
     _ -> []
